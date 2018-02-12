@@ -2,12 +2,75 @@
 <html lang="en">
 <head>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
     <script type="text/babel" >
         "use strict";
     
+		let canvas, ctx, bufferCanvas, bufferCtx, socket;
+		
+		const drawDoge = () => {
+			const doge = new Image();
+			
+			doge.onload = () => {
+				let orientation = Math.floor(Math.random() * 1.99) * -1;
+				let rotation = Math.floor(Math.random() * 4) * 90;
+				let x = Math.floor(Math.random() * 400) + 100;
+				let y = Math.floor(Math.random() * 400) + 100;
+				
+				ctx.save();
+				ctx.translate(x, y);
+				ctx.rotate(rotation * Math.PI / 180);
+				ctx.drawImage(doge, -100, -100, 200, 200);
+				ctx.restore();
+				sendDoge(x - 100, y - 100, 200, 200);
+			};
+			
+			doge.src = "Doge.jpg";
+		}
+		
+		const sendDoge = (x, y, w, h) => {
+			bufferCtx.drawImage(canvas, x, y, w, h, 0, 0, 200, 200);
+			
+			const message = {x, y, w, h, img: bufferCanvas.toDataURL()};
+			socket.emit("sendDoge", message);
+		};
+		
+		const attachSocketEvents = (sock) => {
+			sock.on('sendDoge', (data) => {
+				
+				let newDoge = new Image();
+				
+				newDoge.onload = () => {
+					ctx.save();
+					ctx.globalCompositeOperation = "source-over";
+					ctx.drawImage(newDoge, data.x, data.y, data.w, data.h);
+				};
+				
+				newDoge.src = data.img;
+			});
+		};
+		
+		const init = () => {
+			socket = io.connect();
+			attachSocketEvents(socket);
+			
+			canvas = document.querySelector("#viewport");
+			ctx = canvas.getContext('2d');
+			
+			bufferCanvas = document.createElement("canvas");
+			bufferCanvas.width = 200;
+			bufferCanvas.height = 200;
+			bufferCtx = bufferCanvas.getContext('2d');
+			
+			drawDoge();
+		};
+		
+		window.onload = init;
+	
     </script>
 </head>
 <body>
-
+	<p style="font-family: Comic Sans MS; color: purple;">Many Doge</p>
+	<canvas width="800" height="800" id="viewport"></canvas>
 </body>
 </html>
